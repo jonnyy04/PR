@@ -1,0 +1,17 @@
+version: '3.8'
+
+services:
+  http_server:
+    build: . 
+    
+    hostname: pr-http-server
+    
+    ports:
+      - "8080:8080"
+    
+    volumes:
+      - ./content:/app/content 
+    
+    command: python server.py /app/content 8080 
+    
+    restart: unless-stopped
