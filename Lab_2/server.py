@@ -19,7 +19,7 @@ counter_lock = Lock()
 
 rate_limit_data = defaultdict(lambda: deque())
 rate_limit_lock = Lock()
-RATE_LIMIT = 10 # requests per second
+RATE_LIMIT = 40 # requests per second
 RATE_WINDOW = 1.0  # seconds
 
 

@@ -63,6 +63,8 @@ python test_server.py compare 8081 8080 --requests 10
 - Concurrent: ~1 second (all requests processed in parallel)
 - **Speedup: ~10x**
 
+![alt text](img/compare.png)
+
 ### Test 2: Race Condition (Naive Counter)
 
 ```bash
@@ -77,6 +79,9 @@ python test_server.py race 8080 --requests 100
 1. 100 threads try to increment the counter simultaneously
 2. Without synchronization, a **race condition** occurs
 3. The final value will be < 100 (e.g., 87, 92, etc.)
+
+![alt text](img/race3.png)
+![alt text](img/race4.png)
 
 **Why race condition occurs**:
 ```python
@@ -103,6 +108,9 @@ python test_server.py race 8080 --requests 100
 - Counter value will be exactly **100**
 - The lock ensures exclusive access: `with counter_lock:`
 
+![alt text](img/race1.png)
+![alt text](img/race2.png)
+
 ### Test 4: Rate Limiting
 
 ```bash
@@ -122,13 +130,12 @@ python test_server.py ratelimit 8080 --duration 5 --rate 4
 - Old requests (> 1s) are automatically removed
 - If there are already 5 requests in the last second → **429 Too Many Requests**
 
-**Thread-safety**:
-```python
-with rate_limit_lock:
-    # Access to rate_limit_data is protected
-    request_times = rate_limit_data[client_ip]
-    # ...
-```
+![alt text](img/rate-limit2.png)
+As we can see half of request returned 429, so the server blocked 5 of them each second
+![alt text](img/rate-limit3.png)
+In this test each request was successful since the test script sent 5 rps so the server rate limit was respected.
+
+
 
 ## Implemented Features
 

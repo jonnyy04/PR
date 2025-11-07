@@ -137,11 +137,11 @@ def compare_servers(single_threaded_port, concurrent_port, num_requests=10):
     print("COMPARING SINGLE-THREADED VS CONCURRENT SERVER")
     print("="*60)
     
-    url_single = f"http://localhost:{single_threaded_port}/index.html"
+    url_single = f"http://127.0.0.1:{single_threaded_port}/index.html"
     print("\n1. Testing SINGLE-THREADED server:")
     time_single, _ = test_concurrent_requests(url_single, num_requests)
     
-    url_concurrent = f"http://localhost:{concurrent_port}/index.html"
+    url_concurrent = f"http://127.0.0.1:{concurrent_port}/index.html"
     print("\n2. Testing CONCURRENT server:")
     time_concurrent, _ = test_concurrent_requests(url_concurrent, num_requests)
     
@@ -191,7 +191,7 @@ if __name__ == "__main__":
     
     elif test_type == "concurrent":
         port = int(sys.argv[2])
-        url = f"http://localhost:{port}/index.html"
+        url = f"http://127.0.0.1:{port}/index.html"
         num_requests = 10
         
         if '--requests' in sys.argv:
@@ -202,7 +202,7 @@ if __name__ == "__main__":
     
     elif test_type == "race":
         port = int(sys.argv[2])
-        url = f"http://localhost:{port}/index.html"
+        url = f"http://127.0.0.1:{port}/index.html"
         num_requests = 100
         
         if '--requests' in sys.argv:
@@ -213,7 +213,7 @@ if __name__ == "__main__":
     
     elif test_type == "ratelimit":
         port = int(sys.argv[2])
-        url = f"http://localhost:{port}/index.html"
+        url = f"http://127.0.0.1:{port}/index.html"
         duration = 5
         rate = 10
         
