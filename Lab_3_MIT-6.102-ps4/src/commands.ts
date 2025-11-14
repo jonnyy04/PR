@@ -25,7 +25,6 @@ export async function map(board: Board, playerId: string, f: (card: string) => P
 
 /**
  * Watches the board for changes.
- * (implemented later in Problem 5)
  */
 export async function watch(board: Board, playerId: string): Promise<string> {
 	await board.watch();
