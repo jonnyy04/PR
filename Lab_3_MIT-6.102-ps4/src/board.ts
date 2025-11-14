@@ -6,23 +6,10 @@ import assert from "node:assert";
 import fs from "node:fs";
 
 /**
- * A utility class that provides a way to resolve a Promise externally.
- *
- * This class wraps a Promise and exposes its resolve function, allowing you to
- * resolve the promise at any point in time outside of the promise constructor.
- *
- * @template T The type of value that the promise will resolve to.
- *
- * @example
- * ```typescript
- * const deferred = new Deferred<string>();
- *
- * // Later, you can resolve the promise
- * deferred.resolve("Hello World");
- *
- * // And access the promise
- * const result = await deferred.promise; // "Hello World"
- * ```
+ * Deferred<T>
+ * Signature: `class Deferred<T> { promise: Promise<T>; resolve: (value: T) => void; constructor(): void }`
+ * Preconditions: none.
+ * Postconditions: `promise` and `resolve` are initialized; calling `resolve` fulfills `promise`.
  */
 class Deferred<T> {
 	promise: Promise<T>;
@@ -66,29 +53,10 @@ export class Board {
 	}
 
 	/**
-	 * Validates the internal representation invariants of the board instance.
-	 * Invariants checked:
-	 * - rows and cols are positive integers.
-	 * - this.cards.length === this.rows.
-	 * - Each row in this.cards is defined and has length this.cols.
-	 * - For every cell (r, c):
-	 *   - If the card is null (removed), then:
-	 *     - faceUp[r][c] must be falsy (not true).
-	 *     - control[r][c] must be null.
-	 *   - If the card is undefined, an error is raised (missing data).
-	 *   - If the card is non-null, faceUp[r][c] and control[r][c] must be defined.
-	 *
-	 * This method does not mutate state; it only observes arrays and throws
-	 * when a contract is violated.
-	 *
-	 * Complexity: O(rows * cols).
-	 *
-	 * @private
-	 * @throws {AssertionError} If basic size assertions (positive dimensions,
-	 *         matching row counts and column counts) fail.
-	 * @throws {Error} If per-cell consistency checks fail (e.g. a removed card
-	 *         is marked face-up or has a controller, a cell is undefined, or
-	 *         a present card lacks corresponding faceUp/control entries).
+	 * checkRep()
+	 * Signature: `private checkRep(): void`
+	 * Preconditions: object constructed and internal arrays allocated.
+	 * Postconditions: throws if invariants violated; otherwise no state change.
 	 */
 	private checkRep(): void {
 		assert(this.rows > 0 && this.cols > 0, `Error: board must have positive dimensions, but has ${this.rows}x${this.cols}`);
@@ -124,20 +92,9 @@ export class Board {
 	}
 
 	/**
-	 * Loads a board configuration from a file.
-	 *
-	 * The file format is:
-	 * - Line 1: Board dimensions as "rowsxcols" (e.g., "2x2")
-	 * - Lines 2+: One card per line, ordered left-to-right, top-to-bottom
-	 *
-	 * @param filename - Path to the board file
-	 * @returns A Promise that resolves to a new Board instance
-	 * @throws If the file is invalid, has incorrect dimensions, or missing cards
-	 *
-	 * @example
-	 * ```typescript
-	 * const board = await Board.parseFromFile("boards/game.txt");
-	 * ```
+	 * parseFromFile(filename: string): Promise<Board>
+	 * Preconditions: `filename` is a readable path with first line "<rows>x<cols>" and exactly rows*cols non-empty card lines.
+	 * Postconditions: returns `Board(rows, cols, cards)` or throws on invalid input.
 	 */
 	public static async parseFromFile(filename: string): Promise<Board> {
 		const content: string = await fs.promises.readFile(filename, "utf8");
@@ -171,26 +128,53 @@ export class Board {
 		return new Board(rows, cols, cards);
 	}
 
+	/**
+	 * getRows(): number
+	 * Preconditions: none.
+	 * Postconditions: returns number of rows; no state mutation.
+	 */
 	public getRows(): number {
 		return this.rows;
 	}
-
+	/**
+	 * getCols(): number
+	 * Preconditions: none.
+	 * Postconditions: returns number of cols; no state mutation.
+	 */
 	public getCols(): number {
 		return this.cols;
 	}
-
+	/**
+	 * getCards(): (string | null)[][]
+	 * Preconditions: none.
+	 * Postconditions: returns internal cards matrix (may be mutated by caller).
+	 */
 	public getCards(): (string | null)[][] {
 		return this.cards;
 	}
-
+	/**
+	 * getFaceUp(): boolean[][]
+	 * Preconditions: none.
+	 * Postconditions: returns face-up matrix; no state mutation.
+	 */
 	public getFaceUp(): boolean[][] {
 		return this.faceUp;
 	}
-
+	/**
+	 * getControl(): (string | null)[][]
+	 * Preconditions: none.
+	 * Postconditions: returns control matrix; no state mutation.
+	 */
 	public getControl(): (string | null)[][] {
 		return this.control;
 	}
 
+	/**
+	 * releaseControl(row: number, col: number)
+	 * Signature: `private releaseControl(row: number, col: number): void`
+	 * Preconditions: `row`/`col` are valid indices.
+	 * Postconditions: resolves next waiter (if any) for the cell; does not return a value.
+	 */
 	private releaseControl(row: number, col: number) {
 		const key = `${row},${col}`;
 		const queue = this.waiting.get(key);
@@ -202,26 +186,9 @@ export class Board {
 	}
 
 	/**
-	 * Flips a card face-up and handles game logic for the Memory Scramble game.
-	 *
-	 * Behavior:
-	 * - First card flip: Marks the card as controlled by the player
-	 * - Second card flip: Compares with the first card
-	 *   - If matching: Cards stay face-up (removed on next turn)
-	 *   - If mismatched: Both cards flip back down on the next first-card flip
-	 * - Waiting: If another player controls the card, this call waits until control is released
-	 *
-	 * @param player - The player ID attempting to flip the card
-	 * @param row - Card row (0-indexed)
-	 * @param col - Card column (0-indexed)
-	 * @returns A Promise that resolves when the flip is complete
-	 * @throws If coordinates are invalid, no card exists, or card is controlled by another player
-	 *
-	 * @example
-	 * ```typescript
-	 * await board.flipCard("player1", 0, 0);
-	 * await board.flipCard("player1", 0, 1);
-	 * ```
+	 * flipCard(player: string, row: number, col: number): Promise<void>
+	 * Preconditions: `row` and `col` are within bounds and `player` is a non-empty string.
+	 * Postconditions: updates `faceUp`, `control`, `cards`, and `playerState` according to game rules; may throw on invalid actions.
 	 */
 	public async flipCard(player: string, row: number, col: number): Promise<void> {
 		this.checkRep();
@@ -253,7 +220,7 @@ export class Board {
 					}
 				}
 				state.lastMatch = undefined;
-				this.notifyWatchers(); // 🔔 notify card removal
+				this.notifyWatchers(); // notify card removal
 			}
 
 			// 3B: flip mismatched cards back down
@@ -269,7 +236,7 @@ export class Board {
 					}
 				}
 				state.lastMismatch = undefined;
-				if (flippedDown) this.notifyWatchers(); // 🔔 notify flipping back down
+				if (flippedDown) this.notifyWatchers(); // notify flipping back down
 			}
 		}
 
@@ -295,7 +262,7 @@ export class Board {
 			this.control[row]![col] = player;
 			state.first = { row, col, card: this.cards[row]![col]! as string };
 
-			this.notifyWatchers(); // 🔔 notify flipping of the first card
+			this.notifyWatchers(); //  notify flipping of the first card
 			return;
 		}
 
@@ -312,7 +279,7 @@ export class Board {
 				this.releaseControl(state.first.row, state.first.col);
 				state.lastMismatch = [state.first];
 				state.first = undefined;
-				this.notifyWatchers(); // 🔔 notify loss of control
+				this.notifyWatchers(); //  notify loss of control
 				throw new Error("No card at that position");
 			}
 
@@ -322,7 +289,7 @@ export class Board {
 				this.releaseControl(state.first.row, state.first.col);
 				state.lastMismatch = [state.first];
 				state.first = undefined;
-				this.notifyWatchers(); // 🔔 notify loss of control
+				this.notifyWatchers(); // notify loss of control
 				throw new Error("Card already controlled");
 			}
 
@@ -330,7 +297,7 @@ export class Board {
 			this.faceUp[row]![col] = true;
 			this.control[row]![col] = player;
 			state.second = { row, col, card: this.cards[row]![col]! as string };
-			this.notifyWatchers(); // 🔔 notify flipping of the second card
+			this.notifyWatchers(); // notify flipping of the second card
 
 			// 2D / 2E: compare
 			if (state.first.card === state.second.card) {
@@ -346,7 +313,7 @@ export class Board {
 			state.first = undefined;
 			state.second = undefined;
 
-			this.notifyWatchers(); // 🔔 notify final comparison
+			this.notifyWatchers(); // notify final comparison
 			return;
 		}
 
@@ -355,28 +322,9 @@ export class Board {
 	}
 
 	/**
-	 * Returns a string representation of the board from a player's perspective.
-	 *
-	 * Output format: One card state per line
-	 * - "none" - Card has been removed
-	 * - "down" - Card is face-down
-	 * - "my <card>" - Card is face-up and controlled by this player
-	 * - "up <card>" - Card is face-up and controlled by another player
-	 *
-	 * @param player - The player ID to show the perspective for
-	 * @returns A formatted string showing the board state
-	 *
-	 * @example
-	 * ```typescript
-	 * const view = board.toDisplayString("player1");
-	 * console.log(view);
-	 * // Output:
-	 * // 2x2
-	 * // my A
-	 * // down
-	 * // up B
-	 * // none
-	 * ```
+	 * toDisplayString(player: string): string
+	 * Preconditions: `player` is a string; board invariants hold.
+	 * Postconditions: returns a multi-line string view for `player`; does not mutate state.
 	 */
 	public toDisplayString(player: string): string {
 		let output = `${this.rows}x${this.cols}\n`;
@@ -397,6 +345,11 @@ export class Board {
 		return output;
 	}
 
+	/**
+	 * toString(): string
+	 * Preconditions: board invariants hold.
+	 * Postconditions: returns compact string showing cards and states; does not mutate state.
+	 */
 	public toString(): string {
 		let s = "";
 		for (let r = 0; r < this.rows; r++) {
@@ -410,32 +363,28 @@ export class Board {
 		return s;
 	}
 
+	/**
+	 * isFaceUp(row: number, col: number): boolean
+	 * Preconditions: `row`/`col` are indices.
+	 * Postconditions: returns true iff card at (row,col) is face-up; no mutation.
+	 */
 	public isFaceUp(row: number, col: number): boolean {
 		return !!this.faceUp[row]?.[col];
 	}
 
+	/**
+	 * controlledBy(row: number, col: number): string | null
+	 * Preconditions: `row`/`col` are indices.
+	 * Postconditions: returns controller id or null; no mutation.
+	 */
 	public controlledBy(row: number, col: number): string | null {
 		return this.control[row]?.[col] ?? null;
 	}
 
 	/**
-	 * Transforms all cards on the board using an async function.
-	 *
-	 * The transformation function is applied to every non-removed card asynchronously.
-	 * This operation may interleave with other game actions and does not block flips.
-	 * Removed cards (null) are skipped. Cards that are removed during transformation are not replaced.
-	 *
-	 * @param f - An async function that takes a card value and returns the transformed value
-	 * @returns A Promise that resolves when all transformations are complete
-	 *
-	 * @example
-	 * ```typescript
-	 * // Convert all cards to lowercase
-	 * await board.mapCards(async (card) => card.toLowerCase());
-	 *
-	 * // Add a suffix to each card
-	 * await board.mapCards(async (card) => card + "!");
-	 * ```
+	 * mapCards(f: (card: string) => Promise<string>): Promise<void>
+	 * Preconditions: `f` is an async function; board invariants hold.
+	 * Postconditions: non-removed cards are replaced with results of `f`; watchers are notified; resolves when complete.
 	 */
 	public async mapCards(f: (card: string) => Promise<string>): Promise<void> {
 		const tasks: Promise<void>[] = [];
@@ -462,12 +411,9 @@ export class Board {
 	}
 
 	/**
-	 * Notifies all watchers that the board has changed and clears the watcher list.
-	 *
-	 * Called internally when cards are flipped, removed, or transformed.
-	 * Resolves all pending watch() promises.
-	 *
-	 * @private
+	 * notifyWatchers(): void
+	 * Preconditions: none.
+	 * Postconditions: resolves all pending watchers and clears `this.watchers`.
 	 */
 	private notifyWatchers(): void {
 		for (const watcher of this.watchers) {
@@ -477,19 +423,9 @@ export class Board {
 	}
 
 	/**
-	 * Waits until the board changes (a card is flipped, removed, or transformed).
-	 *
-	 * This is useful for detecting visible board state changes. Control-only changes
-	 * (e.g., a player gaining/losing control) do not trigger watchers.
-	 *
-	 * @returns A Promise that resolves when the board changes
-	 *
-	 * @example
-	 * ```typescript
-	 * const watcher = board.watch();
-	 * // ... perform some async actions ...
-	 * await watcher; // Wait for any board change
-	 * ```
+	 * watch(): Promise<void>
+	 * Preconditions: none.
+	 * Postconditions: returns a promise that resolves when `notifyWatchers` is called.
 	 */
 	public async watch(): Promise<void> {
 		const deferred = new Deferred<void>();

@@ -21,9 +21,9 @@ async function simulationMain(): Promise<void> {
 	const rows = board.getRows();
 	const cols = board.getCols();
 
-	const players = 20; // many players to stress concurrency
-	const triesPerPlayer = 10;
-	const maxDelayMs = 10;
+	const players = 4; // many players to stress concurrency
+	const triesPerPlayer = 100;
+	const maxDelayMs = 100;
 
 	type Stats = {
 		successfulMoves: number;
@@ -42,11 +42,11 @@ async function simulationMain(): Promise<void> {
 	}
 
 	await Promise.all(playerPromises);
-	console.log("✅ Simulation complete — no crashes or deadlocks detected");
+	console.log(" Simulation complete — no crashes or deadlocks detected");
 
 	/** Simulate a single player performing random moves */
 	async function simulatePlayer(playerId: string): Promise<void> {
-		console.log(`🎮 ${playerId} joined the game`);
+		console.log(` ${playerId} joined the game`);
 
 		playerStats.set(playerId, {
 			successfulMoves: 0,
@@ -73,18 +73,17 @@ async function simulationMain(): Promise<void> {
 						c1 = randomInt(cols);
 
 						// Dacă e ocupată de altcineva -> va intra în așteptare în flipCard (1-D),
-						// noi doar logăm frumos înainte
 						const controller = board.controlledBy(r1, c1);
 						const isUp = board.isFaceUp(r1, c1);
 
 						if (isUp && controller !== null && controller !== playerId) {
-							console.log(`🕒 ${playerId} wants first card at (${r1},${c1}) but it's busy (controlled by ${controller}), will wait...`);
+							console.log(` ${playerId} wants first card at (${r1},${c1}) but it's busy (controlled by ${controller}), will wait...`);
 						} else {
-							console.log(`👆 ${playerId} tries first flip at (${r1},${c1})`);
+							console.log(` ${playerId} tries first flip at (${r1},${c1})`);
 						}
 
 						await board.flipCard(playerId, r1, c1);
-						console.log(`✅ ${playerId} turn ${t}: first flip at (${r1},${c1})`);
+						console.log(` ${playerId} turn ${t}: first flip at (${r1},${c1})`);
 						break;
 					} catch (err) {
 						attempts++;
@@ -105,7 +104,7 @@ async function simulationMain(): Promise<void> {
 						} while (r2 === r1 && c2 === c1);
 
 						await board.flipCard(playerId, r2, c2);
-						console.log(`📍 ${playerId} turn ${t}: second flip at (${r2},${c2})`);
+						console.log(` ${playerId} turn ${t}: second flip at (${r2},${c2})`);
 						break;
 					} catch (err) {
 						attempts++;
@@ -129,11 +128,11 @@ async function simulationMain(): Promise<void> {
 
 				const message = (err as Error).message;
 				if (message.includes("No card at that position")) {
-					console.log(`💫 ${playerId}: Tried empty position (${r1},${c1})`);
+					console.log(` ${playerId}: Tried empty position (${r1},${c1})`);
 				} else if (message.includes("Card controlled")) {
-					console.log(`🔒 ${playerId}: Card already in use`);
+					console.log(` ${playerId}: Card already in use`);
 				} else {
-					console.error(`❌ ${playerId} error at turn ${t}:`, message);
+					console.error(` ${playerId} error at turn ${t}:`, message);
 					stats.errors++;
 				}
 			}
