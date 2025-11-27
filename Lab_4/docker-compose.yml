@@ -1,0 +1,110 @@
+services:
+
+  leader:
+    build: .
+    container_name: kv_leader
+    command: python leader.py
+    ports:
+      - "5000:5000"
+    environment:
+      - WRITE_QUORUM=5
+      - MIN_DELAY=0.1
+      - MAX_DELAY=1
+      - FOLLOWERS=http://follower1:5000,http://follower2:5000,http://follower3:5000,http://follower4:5000,http://follower5:5000
+    networks:
+      - kvstore_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  follower1:
+    build: .
+    container_name: kv_follower1
+    command: python follower.py
+    ports:
+      - "5001:5000"
+    environment:
+      - FOLLOWER_ID=follower1
+    networks:
+      - kvstore_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  follower2:
+    build: .
+    container_name: kv_follower2
+    command: python follower.py
+    ports:
+      - "5002:5000"
+    environment:
+      - FOLLOWER_ID=follower2
+    networks:
+      - kvstore_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  follower3:
+    build: .
+    container_name: kv_follower3
+    command: python follower.py
+    ports:
+      - "5003:5000"
+    environment:
+      - FOLLOWER_ID=follower3
+    networks:
+      - kvstore_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  follower4:
+    build: .
+    container_name: kv_follower4
+    command: python follower.py
+    ports:
+      - "5004:5000"
+    environment:
+      - FOLLOWER_ID=follower4
+    networks:
+      - kvstore_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  follower5:
+    build: .
+    container_name: kv_follower5
+    command: python follower.py
+    ports:
+      - "5005:5000"
+    environment:
+      - FOLLOWER_ID=follower5
+    networks:
+      - kvstore_network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:5000/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+networks:
+  kvstore_network:
+    driver: bridge
